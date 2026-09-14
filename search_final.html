@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>検索くんPRO (統合ローカル版)</title>
+<title>検索くんPRO</title>
 <style>
 /* ------------------------------------------------ */
 /* PC/デフォルト表示スタイル */
@@ -123,7 +123,7 @@ footer {
 <body>
 
 <div class="main-content">
-    <h1>検索くんPRO (統合ローカル版) <span style="font-size: 65%; font-weight: normal;"> ver.1.00β</span></h1>
+    <h1>検索くんPRO <span style="font-size: 65%; font-weight: normal;"> ver.1.00β</span></h1>
     <p id="sourceInfo" style="color: #555; margin-top: -10px; margin-bottom: 20px; text-align: center;">データ読込中...</p>
 
     <div style="text-align: center; margin-bottom: 20px;">
@@ -171,34 +171,23 @@ footer {
 </div>
 
 <footer>
-    <!-- 1行目: 中央ログアウトボタン（背景：薄グレー、文字：黒） -->
+    <!-- 1行目中央: 薄グレー背景/黒文字のログアウトボタン -->
     <div class="footer-logout-container">
-        <button id="logoutBtn" class="btn-logout">ログアウト</button>
+        <button id="logoutBtn" onclick="google.script.run.withSuccessHandler(() => location.reload()).logout()" class="btn-logout">ログアウト</button>
     </div>
-    <!-- 2行目: アカウント数 ＆ クレジット表記 -->
+    <!-- 2行目中央: クレジット ＆ アカウント数 -->
     <p class="footer-info">
-        <span id="accountCountDisplay">登録アカウント数: --</span> | <span>(C) T.Okada 2026</span>
+        <span id="accountCountDisplay">登録アカウント数: <?= accountCount ?></span> | <span>(C) T.Okada 2026</span>
     </p>
 </footer>
 
 <script>
-let kanshomeiData = []; 
-let latlngData = {};    
+// --- バックエンド(GAS/サーバー)から渡されるデータ(前バージョンの変数・形式を保持) ---
+let kanshomeiData = <?= kanshomeiDataJson ?>; 
+let latlngData = <?= latlngDataJson ?>;    
 let selectedKanshomei = null;
 let selectedKansyoMapUrl = null;
 let currentJigyosho = '31所';
-
-// 外部JSONファイル名
-const JSON_FILES = {
-    '31所': {
-        kansyo: 'database_31.json',
-        latlng: 'latlng_31.json'
-    },
-    '32所': {
-        kansyo: 'database_32.json',
-        latlng: 'latlng_32.json'
-    }
-};
 
 // --- UI要素の取得 ---
 const sourceInfo = document.getElementById("sourceInfo");
@@ -214,7 +203,6 @@ const denchuFormatInfo = document.getElementById('denchuFormatInfo');
 const mapSearchResult = document.getElementById('mapSearchResult');
 const switchBtn31 = document.getElementById('switchData31');
 const switchBtn32 = document.getElementById('switchData32');
-const logoutBtn = document.getElementById('logoutBtn');
 
 // --- ユーティリティ関数 ---
 
@@ -263,27 +251,9 @@ const convertCode = (inputStr) => {
     return { error: false, code: finalCode };
 };
 
-/** 配列形式の緯度経度データをオブジェクト形式に変換する */
-function normalizeLatlngData(arrayData) {
-    const normalized = {};
-    if (!Array.isArray(arrayData)) {
-        console.error("[JS] 緯度経度データが配列ではありません。");
-        return {};
-    }
-    arrayData.forEach(item => {
-        const key = item["電柱番号"];
-        const value = item["緯度,経度"];
-        if (key && value) {
-            normalized[key] = value;
-        }
-    });
-    console.log(`[INIT] 緯度経度データ ${arrayData.length}件を変換しました。`);
-    return normalized;
-}
+// --- データロード/切替処理（バックエンドGAS連携） ---
 
-// --- データロード処理 ---
-
-async function loadData(jigyosho) {
+function loadData(jigyosho) {
     currentJigyosho = jigyosho;
     sourceInfo.textContent = `データ読込中: 「${jigyosho}」...`;
     mapSearchBtn.disabled = true;
@@ -292,37 +262,24 @@ async function loadData(jigyosho) {
     switchBtn31.classList.toggle('active', jigyosho === '31所');
     switchBtn32.classList.toggle('active', jigyosho === '32所');
 
-    const files = JSON_FILES[jigyosho];
-
-    try {
-        // 1. 冠称名データのロード
-        console.log(`[FETCH] 冠称名データ読み込み開始: ${files.kansyo}`);
-        const resK = await fetch(files.kansyo);
-        if (!resK.ok) throw new Error(`冠称名データの取得に失敗: ${resK.status}`);
-        kanshomeiData = await resK.json();
-
-        // 2. 緯度経度データのロード
-        console.log(`[FETCH] 緯度経度データ読み込み開始: ${files.latlng}`);
-        const resL = await fetch(files.latlng);
-        if (!resL.ok) throw new Error(`緯度経度データの取得に失敗: ${resL.status}`);
-        const arrayLatlng = await resL.json(); 
-        
-        latlngData = normalizeLatlngData(arrayLatlng); 
-
-        sourceInfo.textContent = 
-            `データ取得完了: 「${jigyosho}」 冠称名 ${kanshomeiData.length}件, 緯度経度 ${Object.keys(latlngData).length}件`;
-        
-        if (step2Container.style.display === "block") {
-            mapSearchBtn.disabled = false;
-        }
-
-    } catch (e) {
-        console.error(`[FETCH] データロードエラー (${jigyosho}):`, e);
-        sourceInfo.textContent = `エラー: 「${jigyosho}」データが取得できませんでした (${e.message})`;
-        kanshomeiData = [];
-        latlngData = {};
-        mapSearchBtn.disabled = true;
-    }
+    console.log(`[FETCH] サーバー側データ読み込み呼び出し: ${jigyosho}`);
+    
+    // GASバックエンドの getData 関数を呼び出し
+    google.script.run
+        .withSuccessHandler((data) => {
+            kanshomeiData = data.kansyo;
+            latlngData = data.latlng;
+            sourceInfo.textContent = `データ取得完了: 「${jigyosho}」 冠称名 ${kanshomeiData.length}件`;
+            console.log(`[FETCH] データ取得成功 (${jigyosho})`);
+            if (step2Container.style.display === "block") {
+                mapSearchBtn.disabled = false;
+            }
+        })
+        .withFailureHandler((e) => {
+            console.error(`[FETCH] データロードエラー (${jigyosho}):`, e);
+            sourceInfo.textContent = `エラー: データが取得できませんでした (${e.message})`;
+        })
+        .getData(jigyosho);
 }
 
 // --- ステップ1: 冠称名検索処理 ---
@@ -399,7 +356,7 @@ const performMapSearch = () => {
 
     console.log(`[SEARCH] 電柱ピンポイント検索実行: ${selectedKanshomei} - ${rawInput}`);
 
-    if (Object.keys(latlngData).length === 0) {
+    if (!latlngData || Object.keys(latlngData).length === 0) {
         mapSearchResult.textContent = "エラー: 電柱データがロードされていません。";
         return;
     }
@@ -444,21 +401,13 @@ function resetSearchState() {
     kanaInput.focus();
 }
 
-// --- ログアウト処理 ---
-function handleLogout() {
-    console.log("[AUTH] ログアウトが実行されました。");
-    // 必要に応じてセッション削除やログイン画面への遷移処理を記述
-    alert("ログアウトしました。");
-    // 例: location.href = 'login.html';
-}
-
 // --- 初期化とイベントリスナー設定 ---
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log(`[INIT] アプリ起動 (統合版): ${new Date().toLocaleTimeString()}`);
+    console.log(`[INIT] アプリ起動: ${new Date().toLocaleTimeString()}`);
     
-    // 初期データロード (デフォルト: 31所)
-    loadData('31所');
+    // 初期表示設定
+    sourceInfo.textContent = `データロード完了: 「${currentJigyosho}」 冠称名 ${kanshomeiData.length}件`;
 
     // データ切り替えボタン
     switchBtn31.addEventListener('click', () => loadData('31所'));
@@ -479,9 +428,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const resetSearchBtn = document.getElementById('resetSearchBtn');
     resetSearchBtn.addEventListener('click', () => resetSearchState());
-
-    // ログアウトボタンイベント
-    logoutBtn.addEventListener('click', handleLogout);
 });
 </script>
 </body>
