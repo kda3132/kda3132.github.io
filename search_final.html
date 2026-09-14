@@ -31,7 +31,7 @@
     .result-item-btn { display: block; width: 100%; margin: 10px auto; padding: 14px; background-color: #ffffff; color: #007bff; border: 2px solid #007bff; border-radius: 10px; text-align: center; font-weight: bold; font-size: 18px; box-sizing: border-box; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: background 0.2s; }
     .result-item-btn:hover { background-color: #e8f0fe; }
     
-    /* Step2 コンテナのスタイルを Step1 と同様のフラットなデザインに変更 */
+    /* Step2 コンテナのスタイル */
     #step2Container { display: none; max-width: 500px; margin: 0 auto; }
     
     .btn-reset { background-color: #6c757d; border-color: #5a6268; margin-top: 15px; }
@@ -74,7 +74,7 @@
       flex-wrap: wrap;
     }
 
-    /* スマホ向け表示調整（ログイン画面のスケール感に合わせて最適化） */
+    /* スマホ向け表示調整 */
     body.mobile-view { padding: 15px 10px; }
     body.mobile-view h1 { font-size: 1.8rem; margin-bottom: 15px; }
     body.mobile-view h2 { font-size: 1.4rem; margin-top: 20px; }
@@ -361,6 +361,11 @@
       selectedKanshoItem = item;
 
       logInfo("JS", `ステップ2へ移行。選択冠称名: ${item.冠称名}, MAP URL: ${item.map_url || '未設定'}`);
+
+      // 【修正箇所】Step2へ遷移するタイミングでStep1の入力フィールドと検索結果一覧をクリア
+      document.getElementById('nameInput').value = '';
+      document.getElementById('kanaInput').value = '';
+      document.getElementById('resultsContainer').innerHTML = '';
 
       document.getElementById('selectedKanshomeiDisplay').textContent = item.冠称名;
       document.getElementById('step1Container').style.display = 'none';
