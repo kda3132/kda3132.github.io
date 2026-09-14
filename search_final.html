@@ -34,6 +34,43 @@
     .btn-reset { background-color: #6c757d; border-color: #5a6268; margin-top: 15px; }
     .btn-reset:hover { background-color: #5a6268; }
     
+    /* フッター専用スタイル */
+    footer {
+      margin-top: 30px;
+      padding: 10px 0 20px 0;
+      text-align: center;
+    }
+    .footer-logout-row {
+      margin-bottom: 12px;
+    }
+    .btn-logout {
+      background-color: #f0f0f0;
+      color: #333333;
+      border: 1px solid #cccccc;
+      padding: 8px 24px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+    .btn-logout:hover {
+      background-color: #e0e0e0;
+      border-color: #bbb;
+    }
+    .btn-logout:active {
+      background-color: #d0d0d0;
+    }
+    .footer-info-row {
+      font-size: 0.9rem;
+      color: #666;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
     /* スマホ向け表示調整（ログイン画面のスケール感に合わせて最適化） */
     body.mobile-view { padding: 15px 10px; }
     body.mobile-view h1 { font-size: 1.8rem; margin-bottom: 15px; }
@@ -60,11 +97,7 @@
   <h1>検索くんProFinal <span id="versionLabel" style="font-size: 60%; font-weight: normal; cursor: pointer; color: #007bff;">ver.1.00</span></h1>
   <div id="toast"></div>
 
-  <div style="text-align: right; max-width: 600px; margin: 0 auto;">
-    <button onclick="logout()" style="padding: 5px 10px; font-size: 14px; background-color: #dc3545; border-color: #dc3545;">ログアウト</button>
-  </div>
-
-  <p id="sourceInfo" style="color: #555; margin-top: -10px; margin-bottom: 20px; text-align: center;">（データソース読み込み中...）</p>
+  <p id="sourceInfo" style="color: #555; margin-top: 10px; margin-bottom: 20px; text-align: center;">（データソース読み込み中...）</p>
 
   <!-- タブ（事業所切り替え） -->
   <div class="tab-container">
@@ -124,21 +157,19 @@
   <hr>
   
   <footer>
-    <p>(C) T.Okada 2026</p>
-    <p>visit: <strong id="visitCountDisplay">---</strong></p>
+    <div class="footer-logout-row">
+      <button class="btn-logout" onclick="logout()">ログアウト</button>
+    </div>
+    <div class="footer-info-row">
+      <span>(C) T.Okada 2026</span>
+      <span>visit: <strong id="visitCountDisplay">---</strong></span>
+    </div>
   </footer>
 
   <script>
-    // --- コンソールログ用ヘルパー ---
-    let deviceType = "Unknown";
-    function logEvent(eventName, details = {}) {
-      const timestamp = new Date().toISOString();
-      console.log(`[EVENT: ${eventName}]`, {
-        timestamp: timestamp,
-        deviceType: deviceType,
-        userAgent: navigator.userAgent,
-        ...details
-      });
+    // --- コンソールログ用簡潔ヘルパー ---
+    function logInfo(tag, message) {
+      console.log(`[${tag}] ${message}`);
     }
 
     // --- 1. セッション認証チェック ---
@@ -155,7 +186,7 @@
 
     // ログアウト処理
     function logout() {
-        logEvent("Logout", { action: "User logged out" });
+        logInfo("AUTH", "ユーザーがログアウトしました。");
         sessionStorage.clear();
         window.location.href = './index.html';
     }
@@ -198,6 +229,9 @@
 
     // 3. 画面初期化処理
     document.addEventListener("DOMContentLoaded", function() {
+      // ログインページからの引き継ぎ情報をログ出力
+      logInfo("INIT", `ログインセッション情報取得完了 -> GAS_URL: ${GAS_BASE_URL ? '取得済' : '未設定'}, 初期Target: ${currentTarget}, 訪問回数: ${visitCount || 0}, UserAgent: ${USER_AGENT_FROM_GAS || navigator.userAgent}`);
+
       const visitElem = document.getElementById('visitCountDisplay');
       if (visitElem) {
         visitElem.textContent = visitCount || "0";
@@ -205,16 +239,10 @@
 
       const ua = (USER_AGENT_FROM_GAS || navigator.userAgent).toLowerCase();
       const isMobile = /mobile|android|iphone|ipad|ipod/i.test(ua);
-      deviceType = isMobile ? "Mobile (スマホ)" : "PC (パソコン)";
+      const deviceType = isMobile ? "Mobile (スマホ)" : "PC (パソコン)";
       
       document.body.classList.add(isMobile ? "mobile-view" : "pc-view");
-
-      logEvent("PageInit", {
-        screenWidth: window.innerWidth,
-        screenHeight: window.innerHeight,
-        visitCount: visitCount,
-        initialTarget: currentTarget
-      });
+      logInfo("INIT", `画面描画初期化完了: ${deviceType} モード`);
 
       setupEventListeners();
       switchTarget(currentTarget, true);
@@ -223,7 +251,7 @@
     // 4. データソース切替処理
     async function switchTarget(target, forceLoad = false) {
       if (!forceLoad && currentTarget === target && masterKansyoData.length > 0) {
-        logEvent("SwitchTarget_Skipped", { target: target, reason: "Already active" });
+        logInfo("JS", `データソース切替スキップ (既に ${target} を選択中)`);
         return;
       }
 
@@ -232,7 +260,8 @@
       const targetLabel = is32 ? '32所' : '31所';
       const cacheKey = `kansyo_cache_${target}`;
 
-      logEvent("SwitchTarget_Start", { target: target, targetLabel: targetLabel, forceLoad: forceLoad });
+      const fileNameParam = is32 ? 'kansyodata_32_sheets' : 'kansyodata_31_sheets';
+      logInfo("FETCH", `冠称名データ読み込み開始: ${fileNameParam}`);
 
       const btn31 = document.getElementById('btn31');
       const btn32 = document.getElementById('btn32');
@@ -253,7 +282,7 @@
           document.getElementById('resultsContainer').innerHTML = '<p style="color:blue;">読み込み完了。検索キーワードを入力してください。</p>';
           btn31.disabled = false;
           btn32.disabled = false;
-          logEvent("SwitchTarget_LoadedFromCache", { target: target, count: masterKansyoData.length });
+          logInfo("CACHE", `キャッシュより ${targetLabel} 冠称名データ取得成功 (${masterKansyoData.length}件)`);
           return;
         } catch (e) {
           sessionStorage.removeItem(cacheKey);
@@ -261,7 +290,6 @@
       }
 
       try {
-        const fileNameParam = is32 ? 'kansyodata_32_sheets' : 'kansyodata_31_sheets';
         const requestUrl = `${GAS_BASE_URL}?fileName=${fileNameParam}`;
         
         const response = await fetch(requestUrl);
@@ -272,10 +300,10 @@
 
         document.getElementById('sourceInfo').textContent = `現在のデータソース: ${targetLabel}データ (${masterKansyoData.length}件)`;
         document.getElementById('resultsContainer').innerHTML = '<p style="color:blue;">読み込み完了。検索キーワードを入力してください。</p>';
-        logEvent("SwitchTarget_LoadedFromAPI", { target: target, count: masterKansyoData.length });
+        logInfo("FETCH", `${targetLabel} 冠称名データ取得成功 (${masterKansyoData.length}件)`);
       } catch (err) {
         console.error(`[ERROR] ${targetLabel} データロード失敗:`, err);
-        logEvent("SwitchTarget_Error", { target: target, error: err.toString() });
+        logInfo("ERROR", `${targetLabel} データロード失敗: ${err.message}`);
         document.getElementById('sourceInfo').textContent = "エラー: 冠称名データの取得に失敗しました。";
         document.getElementById('resultsContainer').innerHTML = '<p style="color:red;">データの取得に失敗しました。</p>';
       } finally {
@@ -290,7 +318,7 @@
 
       if (!query.trim()) {
         container.innerHTML = '<p style="color:orange;">検索キーワードを入力してください。</p>';
-        logEvent("KansyoSearch_Empty", { searchKey: searchKey });
+        logInfo("SEARCH", `空キーワード検索のため中断 (${searchKey})`);
         return;
       }
 
@@ -300,11 +328,7 @@
         return val.includes(q);
       });
 
-      logEvent("KansyoSearch_Executed", {
-        searchKey: searchKey,
-        query: q,
-        hitCount: results.length
-      });
+      logInfo("SEARCH", `冠称名検索実行 [キー: ${searchKey}, クエリ: "${q}"] -> ヒット数: ${results.length}件`);
 
       renderKansyoResults(results);
     }
@@ -330,11 +354,7 @@
     function selectKanshoItem(item) {
       selectedKanshoItem = item;
 
-      logEvent("KanshoItem_Selected", {
-        kanshomei: item.冠称名,
-        kana: item.カナ,
-        hasMapUrl: !!item.map_url
-      });
+      logInfo("JS", `ステップ2へ移行。選択冠称名: ${item.冠称名}, MAP URL: ${item.map_url || '未設定'}`);
 
       document.getElementById('selectedKanshomeiDisplay').textContent = item.冠称名;
       document.getElementById('step1Container').style.display = 'none';
@@ -361,11 +381,11 @@
 
       if (rawInput === "") {
         if (selectedKanshoItem.map_url) {
-          logEvent("MapSearch_OverallMapOpened", { kanshomei: selectedKanshoItem.冠称名, mapUrl: selectedKanshoItem.map_url });
+          logInfo("MAP", `全体地図オープン: ${selectedKanshoItem.冠称名} -> ${selectedKanshoItem.map_url}`);
           window.open(selectedKanshoItem.map_url, '_blank');
           resultMsg.textContent = `冠称名「${selectedKanshoItem.冠称名}」の全体地図を表示しました。`;
         } else {
-          logEvent("MapSearch_OverallMapMissing", { kanshomei: selectedKanshoItem.冠称名 });
+          logInfo("MAP", `全体地図URL未定義: ${selectedKanshoItem.冠称名}`);
           resultMsg.textContent = `冠称名「${selectedKanshoItem.冠称名}」の全体地図URLが定義されていません。`;
         }
         return;
@@ -373,7 +393,7 @@
 
       const conv = convertCode(rawInput);
       if (conv.error) {
-        logEvent("MapSearch_FormatError", { rawInput: rawInput, message: conv.message });
+        logInfo("MAP", `電柱番号入力エラー: "${rawInput}" (${conv.message})`);
         resultMsg.textContent = conv.message;
         formatMsg.textContent = "（入力形式エラー）";
         return;
@@ -385,12 +405,7 @@
       const is32 = (currentTarget === 'target2');
       const latlngFileName = is32 ? 'latlng_32_sheets' : 'latlng_31_sheets';
 
-      logEvent("MapSearch_Start", {
-        rawInput: rawInput,
-        normalizedCode: conv.code,
-        searchKey: searchKey,
-        target: currentTarget
-      });
+      logInfo("FETCH", `ピンポイント座標検索開始: 検索キー [${searchKey}], ファイル: ${latlngFileName}`);
 
       resultMsg.style.color = 'blue';
       resultMsg.textContent = "座標照合中...";
@@ -403,7 +418,7 @@
         const data = await res.json();
 
         if (data.latlng) {
-          logEvent("MapSearch_Success", { searchKey: searchKey, latlng: data.latlng });
+          logInfo("MAP", `座標取得成功: [${searchKey}] -> 緯度経度: ${data.latlng}`);
           resultMsg.style.color = 'green';
           resultMsg.textContent = `緯度経度取得成功: ${data.latlng}`;
 
@@ -412,20 +427,20 @@
 
           denchuInput.value = '';
         } else {
-          logEvent("MapSearch_NotFound", { searchKey: searchKey });
+          logInfo("MAP", `座標未発見: [${searchKey}]`);
           resultMsg.style.color = 'red';
           resultMsg.textContent = `"${searchKey}" に該当する電柱座標は見つかりませんでした。`;
         }
       } catch (err) {
         console.error("[ERROR] 座標照合通信エラー:", err);
-        logEvent("MapSearch_Error", { searchKey: searchKey, error: err.toString() });
+        logInfo("ERROR", `座標照合通信エラー: ${err.message}`);
         resultMsg.style.color = 'red';
         resultMsg.textContent = "検索処理中に通信エラーが発生しました。";
       }
     }
 
     function resetToStep1(fullClear = false) {
-      logEvent("ResetToStep1", { fullClear: fullClear });
+      logInfo("JS", `ステップ1(冠称名選択)へ戻る (完全クリア: ${fullClear})`);
       selectedKanshoItem = null;
       document.getElementById('step1Container').style.display = 'block';
       document.getElementById('step2Container').style.display = 'none';
@@ -448,7 +463,7 @@
       const changeLog = "【更新履歴】\nv1.02: 機能修正\n- ピンポイント検索後に電柱入力欄を自動クリア\n- アクセスログ追記箇所の修正\n- 訪問者数カウント表示の連携補正\n- GitHub Pages版へ移行 (スマホマルチアカウント問題対応)\n- フロントエンドのコンソールログ機能強化・スマホUIサイズ最適化";
       
       versionLabel.addEventListener('click', () => {
-        logEvent("VersionLabel_Clicked");
+        logInfo("EVENT", "バージョン情報がクリックされました");
         toast.textContent = changeLog;
         toast.className = "show";
         setTimeout(() => { toast.className = ""; }, 5000);
@@ -459,7 +474,7 @@
         executeKansyoSearch(nameInput.value, '冠称名');
       };
       document.getElementById('nameSearchBtn').addEventListener('click', () => {
-        logEvent("NameSearchBtn_Clicked");
+        logInfo("EVENT", "冠称名検索ボタンクリック");
         triggerNameSearch();
       });
       nameInput.addEventListener('input', triggerNameSearch);
@@ -472,7 +487,7 @@
         executeKansyoSearch(kanaInput.value, 'カナ');
       };
       document.getElementById('kanaSearchBtn').addEventListener('click', () => {
-        logEvent("KanaSearchBtn_Clicked");
+        logInfo("EVENT", "カナ検索ボタンクリック");
         triggerKanaSearch();
       });
       kanaInput.addEventListener('input', triggerKanaSearch);
@@ -481,7 +496,7 @@
       });
 
       document.getElementById('mapSearchBtn').addEventListener('click', () => {
-        logEvent("MapSearchBtn_Clicked");
+        logInfo("EVENT", "MAP検索ボタンクリック");
         performMapSearch();
       });
       denchuInput.addEventListener('keydown', (e) => {
