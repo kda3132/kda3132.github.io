@@ -149,11 +149,12 @@
 <body>
   <h1>検索くんPro統合版 <span id="versionLabel" style="font-size: 60%; font-weight: normal; cursor: pointer; color: #007bff;">ver.1.02β</span></h1>
   
-  <!-- ダイアログ（OKボタン付き） -->
+<!-- ダイアログ（OKボタン付き） -->
   <dialog id="historyDialog">
+    <div class="dialog-header">更新履歴</div> <!-- ヘッダーを追加 -->
     <div id="historyDialogContent"></div>
     <div class="dialog-footer">
-      <button id="dialogOkBtn">OK</button>
+      <button id="dialogOkBtn" class="btn-dialog-ok">OK</button> <!-- ← class="btn-dialog-ok" を追加 -->
     </div>
   </dialog>
 
