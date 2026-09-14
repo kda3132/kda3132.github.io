@@ -89,16 +89,43 @@
     body.mobile-view footer p { font-size: 0.9rem !important; }
 
     hr { border-top: 2px solid #ddd; margin: 25px 0; }
-    #toast { visibility: hidden; min-width: 280px; background-color: #333; color: #fff; text-align: left; border-radius: 8px; padding: 16px; position: fixed; z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; line-height: 1.6; box-shadow: 0 4px 15px rgba(0,0,0,0.3); white-space: pre-wrap; }
-    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 4.5s; }
-    @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-    @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+    /* ダイアログのスタイル */
+    #historyDialog {
+      border: none;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 400px;
+      width: 85%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      text-align: left;
+    }
+    #historyDialog::backdrop {
+      background: rgba(0, 0, 0, 0.5);
+    }
+    #historyDialogContent {
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      margin: 0 0 20px 0;
+      color: #333;
+    }
+    .dialog-footer {
+      text-align: right;
+    }
   </style>
 </head>
 
 <body>
   <h1>検索くんPro統合版 <span id="versionLabel" style="font-size: 60%; font-weight: normal; cursor: pointer; color: #007bff;">ver.1.02β</span></h1>
-  <div id="toast"></div>
+  
+  <!-- ダイアログ（OKボタン付き） -->
+  <dialog id="historyDialog">
+    <div id="historyDialogContent"></div>
+    <div class="dialog-footer">
+      <button id="dialogOkBtn">OK</button>
+    </div>
+  </dialog>
 
   <p id="sourceInfo" style="color: #555; margin-top: 10px; margin-bottom: 20px; text-align: center;">（データソース読み込み中...）</p>
 
@@ -469,15 +496,20 @@
       const kanaInput = document.getElementById('kanaInput');
       const denchuInput = document.getElementById('denchuInput');
       const versionLabel = document.getElementById('versionLabel');
-      const toast = document.getElementById('toast');
+      const dialog = document.getElementById('historyDialog');
+      const dialogContent = document.getElementById('historyDialogContent');
+      const dialogOkBtn = document.getElementById('dialogOkBtn');
 
       const changeLog = "【更新履歴】\nv1.02: 機能修正\n- ピンポイント検索後に電柱入力欄を自動クリア\n- アクセスログ追記箇所の修正\n- 訪問者数カウント表示の連携補正\n- GitHub Pages版へ移行 (スマホマルチアカウント問題対応)\n- フロントエンドのコンソールログ機能強化・スマホUIサイズ最適化";
       
       versionLabel.addEventListener('click', () => {
         logInfo("EVENT", "バージョン情報がクリックされました");
-        toast.textContent = changeLog;
-        toast.className = "show";
-        setTimeout(() => { toast.className = ""; }, 5000);
+        dialogContent.textContent = changeLog;
+        dialog.showModal();
+      });
+
+      dialogOkBtn.addEventListener('click', () => {
+        dialog.close();
       });
 
       const triggerNameSearch = () => {
