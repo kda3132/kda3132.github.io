@@ -90,7 +90,7 @@
 
     hr { border-top: 2px solid #ddd; margin: 25px 0; }
 
-    /* ダイアログのスタイル */
+    /* ダイアログのスタイル（Windows標準ダイアログ風） */
     #historyDialog {
       border: 1px solid #999;
       border-radius: 6px;
@@ -120,13 +120,15 @@
       color: #222;
       font-family: monospace, sans-serif;
     }
+    /* Windows標準ダイアログに合わせてOKボタンを中央揃えに配置 */
     .dialog-footer {
-      text-align: right;
+      text-align: center;
       border-top: 1px solid #eee;
-      padding-top: 10px;
+      padding-top: 12px;
     }
     .btn-dialog-ok {
-      padding: 6px 20px !important;
+      min-width: 80px;
+      padding: 6px 24px !important;
       font-size: 14px !important;
       font-weight: normal !important;
       background-color: #e1e1e1 !important;
@@ -149,7 +151,7 @@
 <body>
   <h1>検索くんPro統合版 <span id="versionLabel" style="font-size: 60%; font-weight: normal; cursor: pointer; color: #007bff;">ver.1.02β</span></h1>
   
-  <!-- ダイアログ（method="dialog"付きフォームで囲んで確実に閉じる構造に変更） -->
+  <!-- ダイアログ（ボタンを中央配置） -->
   <dialog id="historyDialog">
     <div class="dialog-header">更新履歴</div>
     <div id="historyDialogContent"></div>
