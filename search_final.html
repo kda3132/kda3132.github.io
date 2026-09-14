@@ -488,7 +488,8 @@
         logInfo("EVENT", "冠称名検索ボタンクリック");
         triggerNameSearch();
       });
-      nameInput.addEventListener('input', triggerNameSearch);
+      //リアルタイム検索ならinput
+      //nameInput.addEventListener('input', triggerNameSearch);
       nameInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.isComposing) triggerNameSearch();
       });
@@ -501,7 +502,8 @@
         logInfo("EVENT", "カナ検索ボタンクリック");
         triggerKanaSearch();
       });
-      kanaInput.addEventListener('input', triggerKanaSearch);
+      //リアルタイム検索ならinput
+      //kanaInput.addEventListener('input', triggerKanaSearch);
       kanaInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.isComposing) triggerKanaSearch();
       });
