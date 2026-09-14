@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>検索くんPRO</title>
+<title>検索くんProFinal</title>
 <style>
 /* ------------------------------------------------ */
 /* PC/デフォルト表示スタイル */
@@ -123,7 +123,7 @@ footer {
 <body>
 
 <div class="main-content">
-    <h1>検索くんPRO <span style="font-size: 65%; font-weight: normal;"> ver.1.00β</span></h1>
+    <h1>検索くんProFinal <span style="font-size: 65%; font-weight: normal;"> ver.1.00β</span></h1>
     <p id="sourceInfo" style="color: #555; margin-top: -10px; margin-bottom: 20px; text-align: center;">データ読込中...</p>
 
     <div style="text-align: center; margin-bottom: 20px;">
@@ -183,8 +183,17 @@ footer {
 
 <script>
 // --- バックエンド(GAS/サーバー)から渡されるデータ(前バージョンの変数・形式を保持) ---
-let kanshomeiData = <?= kanshomeiDataJson ?>; 
-let latlngData = <?= latlngDataJson ?>;    
+// テンプレート評価時エラーを防ぐため、JSON stringify形式で受け取るか空値でフォールバックします
+let kanshomeiData = [];
+let latlngData = {};
+
+try {
+  kanshomeiData = JSON.parse('<?= JSON.stringify(kanshomeiData || []) ?>');
+  latlngData = JSON.parse('<?= JSON.stringify(latlngData || {}) ?>');
+} catch(e) {
+  console.warn('[INIT] サーバー変数の初期化をスキップしました (ローカル実行またはデータ未定義)');
+}
+
 let selectedKanshomei = null;
 let selectedKansyoMapUrl = null;
 let currentJigyosho = '31所';
