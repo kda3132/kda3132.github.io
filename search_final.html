@@ -30,7 +30,7 @@
     #resultsContainer { max-width: 500px; margin: 0 auto; }
     .result-item-btn { display: block; width: 100%; margin: 10px auto; padding: 14px; background-color: #ffffff; color: #007bff; border: 2px solid #007bff; border-radius: 10px; text-align: center; font-weight: bold; font-size: 18px; box-sizing: border-box; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: background 0.2s; }
     .result-item-btn:hover { background-color: #e8f0fe; }
-    #step2Container { display: none; margin: 20px auto; padding: 20px; background: #ffffff; border: 2px solid #28a745; border-radius: 12px; max-width: 500px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+    #step2Container { display: none; margin: 20px auto; padding: 20px; background: #ffffff; border-radius: 12px; max-width: 500px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
     .btn-reset { background-color: #6c757d; border-color: #5a6268; margin-top: 15px; }
     .btn-reset:hover { background-color: #5a6268; }
     
@@ -318,7 +318,6 @@
 
       if (!query.trim()) {
         container.innerHTML = '<p style="color:orange;">検索キーワードを入力してください。</p>';
-        logInfo("SEARCH", `空キーワード検索のため中断 (${searchKey})`);
         return;
       }
 
@@ -328,7 +327,10 @@
         return val.includes(q);
       });
 
-      logInfo("SEARCH", `冠称名検索実行 [キー: ${searchKey}, クエリ: "${q}"] -> ヒット数: ${results.length}件`);
+      // ヒットした場合のみログ出力
+      if (results.length > 0) {
+        logInfo("SEARCH", `冠称名検索実行 [キー: ${searchKey}, クエリ: "${q}"] -> ヒット数: ${results.length}件`);
+      }
 
       renderKansyoResults(results);
     }
