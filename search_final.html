@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>検索くんProFinal</title>
+  
+  <style>
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      padding: 20px 10px;
+      margin: 0;
+      background: #f8f8f8;
+      text-align: center;
+    }
+    h1 { color: #333; margin-bottom: 10px; }
+    .search-group { margin-bottom: 25px; display: flex; flex-direction: column; align-items: center; }
+    label { display: block; margin-bottom: 10px; font-weight: bold; font-size: 1.1rem; color: #333; }
+    .input-area { display: flex; width: 100%; max-width: 500px; gap: 8px; }
+    input[type="text"] { padding: 12px 15px; font-size: 16px; flex-grow: 1; border: 2px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+    button { padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer; background-color: #007bff; color: white; border: 1px solid #0056b3; border-radius: 8px; transition: background 0.2s; white-space: nowrap; }
+    button:hover { background-color: #0056b3; }
+    button:active { background-color: #004085; }
+    button:disabled { background-color: #cccccc; border-color: #aaaaaa; cursor: not-allowed; }
+    .tab-container { text-align: center; margin: 20px auto; max-width: 600px; }
+    .tab-title { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; display: block; }
+    .tab-buttons { display: flex; justify-content: center; gap: 10px; }
+    .btn-tab { padding: 10px 18px; border: 2px solid #007bff; border-radius: 6px; background: #fff; color: #007bff; font-weight: bold; cursor: pointer; transition: 0.3s; flex: 1; }
+    .btn-tab.active { background: #007bff; color: #fff; }
+    #resultsContainer { max-width: 500px; margin: 0 auto; }
+    .result-item-btn { display: block; width: 100%; margin: 10px auto; padding: 14px; background-color: #ffffff; color: #007bff; border: 2px solid #007bff; border-radius: 10px; text-align: center; font-weight: bold; font-size: 18px; box-sizing: border-box; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: background 0.2s; }
+    .result-item-btn:hover { background-color: #e8f0fe; }
+    #step2Container { display: none; margin: 20px auto; padding: 20px; background: #ffffff; border: 2px solid #28a745; border-radius: 12px; max-width: 500px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+    .btn-reset { background-color: #6c757d; border-color: #5a6268; margin-top: 15px; }
+    .btn-reset:hover { background-color: #5a6268; }
+    
+    /* スマホ向け表示調整（ログイン画面のスケール感に合わせて最適化） */
+    body.mobile-view { padding: 15px 10px; }
+    body.mobile-view h1 { font-size: 1.8rem; margin-bottom: 15px; }
+    body.mobile-view h2 { font-size: 1.4rem; margin-top: 20px; }
+    body.mobile-view p { font-size: 1.0rem; }
+    body.mobile-view label { font-size: 1.1rem; margin-bottom: 8px; }
+    body.mobile-view .tab-title { font-size: 1.1rem; }
+    body.mobile-view .btn-tab { font-size: 16px; padding: 12px 0; border-radius: 8px; }
+    body.mobile-view .input-area { flex-direction: row; max-width: 100%; gap: 8px; }
+    body.mobile-view input[type="text"] { font-size: 16px !important; padding: 12px !important; border-width: 2px; }
+    body.mobile-view button { font-size: 16px !important; padding: 12px 18px !important; min-height: auto; }
+    body.mobile-view .result-item-btn { font-size: 18px; padding: 16px 10px; border-width: 2px; }
+    body.mobile-view footer p { font-size: 0.9rem !important; }
+
+    hr { border-top: 2px solid #ddd; margin: 25px 0; }
+    #toast { visibility: hidden; min-width: 280px; background-color: #333; color: #fff; text-align: left; border-radius: 8px; padding: 16px; position: fixed; z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; line-height: 1.6; box-shadow: 0 4px 15px rgba(0,0,0,0.3); white-space: pre-wrap; }
+    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 4.5s; }
+    @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+    @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+  </style>
+</head>
+
+<body>
+  <h1>検索くんProFinal <span id="versionLabel" style="font-size: 60%; font-weight: normal; cursor: pointer; color: #007bff;">ver.1.00</span></h1>
+  <div id="toast"></div>
+
+  <div style="text-align: right; max-width: 600px; margin: 0 auto;">
+    <button onclick="logout()" style="padding: 5px 10px; font-size: 14px; background-color: #dc3545; border-color: #dc3545;">ログアウト</button>
+  </div>
+
+  <p id="sourceInfo" style="color: #555; margin-top: -10px; margin-bottom: 20px; text-align: center;">（データソース読み込み中...）</p>
+
+  <!-- タブ（事業所切り替え） -->
+  <div class="tab-container">
+    <span class="tab-title">データソース切り替え</span>
+    <div class="tab-buttons">
+      <button id="btn31" class="btn-tab active" onclick="switchTarget('target1')">31所データ</button>
+      <button id="btn32" class="btn-tab" onclick="switchTarget('target2')">32所データ</button>
+    </div>
+  </div>
+
+  <!-- STEP 1: 冠称名検索 -->
+  <div id="step1Container">
+    <div class="search-group">
+      <label for="nameInput">冠称名で検索 (部分一致)</label>
+      <div class="input-area">
+        <input type="text" id="nameInput" placeholder="例: 南、北" autocomplete="off">
+        <button id="nameSearchBtn">検索</button>
+      </div>
+    </div>
+    
+    <div class="search-group">
+      <label for="kanaInput">半角カナで検索 (部分一致)</label>
+      <div class="input-area">
+        <input type="text" id="kanaInput" placeholder="例: ﾐﾅﾐ" autocomplete="off">
+        <button id="kanaSearchBtn">検索</button>
+      </div>
+    </div>
+
+    <hr>
+    <h2>検索候補一覧</h2>
+    <div id="resultsContainer">
+      <p style="color: gray;">データロード中...</p>
+    </div>
+  </div>
+
+  <!-- STEP 2: 地図・電柱検索 -->
+  <div id="step2Container">
+    <h2>ステップ2: 地図検索</h2>
+    <p style="font-size: 1.2em; font-weight: bold;">
+      選択中: <span id="selectedKanshomeiDisplay" style="color: #007bff;">---</span>
+    </p>
+    
+    <div class="search-group">
+      <label for="denchuInput">電柱番号を入力（空欄のままMAP検索で全体地図）</label>
+      <div class="input-area">
+        <input type="text" id="denchuInput" placeholder="空欄で冠称名MAP / 例: 123, 71W2N2" autocomplete="off">
+        <button id="mapSearchBtn">MAP検索</button>
+      </div>
+    </div>
+    
+    <p id="denchuFormatInfo" style="color:#008000; font-weight: bold;"></p>
+    <p id="mapSearchResult" style="font-weight: bold; color: red;"></p>
+    
+    <button id="resetSearchBtn" class="btn-reset">冠称名選択に戻る</button>
+  </div>
+
+  <hr>
+  
+  <footer>
+    <p>(C) T.Okada 2026</p>
+    <p>visit: <strong id="visitCountDisplay">---</strong></p>
+  </footer>
+
+  <script>
+    // --- コンソールログ用ヘルパー ---
+    let deviceType = "Unknown";
+    function logEvent(eventName, details = {}) {
+      const timestamp = new Date().toISOString();
+      console.log(`[EVENT: ${eventName}]`, {
+        timestamp: timestamp,
+        deviceType: deviceType,
+        userAgent: navigator.userAgent,
+        ...details
+      });
+    }
+
+    // --- 1. セッション認証チェック ---
+    if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+        console.warn("[AUTH] 未ログインのためログインページへリダイレクトします。");
+        window.location.href = './index.html';
+    }
+
+    // --- 2. GASからの受け渡し値 (SessionStorageから取得) ---
+    const GAS_BASE_URL = sessionStorage.getItem('gasBaseUrl');
+    const USER_AGENT_FROM_GAS = sessionStorage.getItem('userAgent');
+    let currentTarget = sessionStorage.getItem('initialTarget') || "target1";
+    const visitCount = sessionStorage.getItem('visitCount');
+
+    // ログアウト処理
+    function logout() {
+        logEvent("Logout", { action: "User logged out" });
+        sessionStorage.clear();
+        window.location.href = './index.html';
+    }
+
+    // グローバルデータ保持用
+    let masterKansyoData = [];
+    let selectedKanshoItem = null;
+
+    // 電柱枝番の正規化処理
+    const toHalfWidth = (str) => {
+      return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+                .replace(/[\u3099\u309A]/g, '');
+    };
+
+    const convertCode = (inputStr) => {
+      if (!inputStr) return { error: true, message: "電柱枝番の入力が空です" };
+      
+      let str = toHalfWidth(inputStr).toUpperCase().replace(/[-\s]/g, '');
+      const robustRegex = /^(\d{1,3})(([A-Z]\d{1,2})*)$/;
+      const matches = str.match(robustRegex);
+
+      if (!matches) {
+        return { error: true, message: "枝番の形式が不正です (例: 123, 71W2N2, 58G2W3)" };
+      }
+
+      const mainCode = matches[1].padStart(3, '0');
+      const allBranches = matches[2] || "";
+
+      let finalCode = mainCode;
+      const branch1Regex = /([A-Z])(\d{1,2})/;
+      const branch1Match = allBranches.match(branch1Regex);
+
+      if (branch1Match) {
+        const char1 = branch1Match[1];
+        const num1 = branch1Match[2].padStart(2, '0');
+        finalCode += (char1 + num1) + allBranches.substring(branch1Match[0].length);
+      }
+      return { error: false, code: finalCode };
+    };
+
+    // 3. 画面初期化処理
+    document.addEventListener("DOMContentLoaded", function() {
+      const visitElem = document.getElementById('visitCountDisplay');
+      if (visitElem) {
+        visitElem.textContent = visitCount || "0";
+      }
+
+      const ua = (USER_AGENT_FROM_GAS || navigator.userAgent).toLowerCase();
+      const isMobile = /mobile|android|iphone|ipad|ipod/i.test(ua);
+      deviceType = isMobile ? "Mobile (スマホ)" : "PC (パソコン)";
+      
+      document.body.classList.add(isMobile ? "mobile-view" : "pc-view");
+
+      logEvent("PageInit", {
+        screenWidth: window.innerWidth,
+        screenHeight: window.innerHeight,
+        visitCount: visitCount,
+        initialTarget: currentTarget
+      });
+
+      setupEventListeners();
+      switchTarget(currentTarget, true);
+    });
+
+    // 4. データソース切替処理
+    async function switchTarget(target, forceLoad = false) {
+      if (!forceLoad && currentTarget === target && masterKansyoData.length > 0) {
+        logEvent("SwitchTarget_Skipped", { target: target, reason: "Already active" });
+        return;
+      }
+
+      currentTarget = target;
+      const is32 = (target === 'target2');
+      const targetLabel = is32 ? '32所' : '31所';
+      const cacheKey = `kansyo_cache_${target}`;
+
+      logEvent("SwitchTarget_Start", { target: target, targetLabel: targetLabel, forceLoad: forceLoad });
+
+      const btn31 = document.getElementById('btn31');
+      const btn32 = document.getElementById('btn32');
+      btn31.classList.toggle('active', !is32);
+      btn32.classList.toggle('active', is32);
+
+      btn31.disabled = true;
+      btn32.disabled = true;
+
+      document.getElementById('sourceInfo').textContent = `データ読み込み中 (${targetLabel})...`;
+      resetToStep1(true);
+
+      const cachedData = sessionStorage.getItem(cacheKey);
+      if (cachedData) {
+        try {
+          masterKansyoData = JSON.parse(cachedData);
+          document.getElementById('sourceInfo').textContent = `現在のデータソース: ${targetLabel}データ (${masterKansyoData.length}件)`;
+          document.getElementById('resultsContainer').innerHTML = '<p style="color:blue;">読み込み完了。検索キーワードを入力してください。</p>';
+          btn31.disabled = false;
+          btn32.disabled = false;
+          logEvent("SwitchTarget_LoadedFromCache", { target: target, count: masterKansyoData.length });
+          return;
+        } catch (e) {
+          sessionStorage.removeItem(cacheKey);
+        }
+      }
+
+      try {
+        const fileNameParam = is32 ? 'kansyodata_32_sheets' : 'kansyodata_31_sheets';
+        const requestUrl = `${GAS_BASE_URL}?fileName=${fileNameParam}`;
+        
+        const response = await fetch(requestUrl);
+        if (!response.ok) throw new Error(`HTTPエラー! status: ${response.status}`);
+        
+        masterKansyoData = await response.json();
+        sessionStorage.setItem(cacheKey, JSON.stringify(masterKansyoData));
+
+        document.getElementById('sourceInfo').textContent = `現在のデータソース: ${targetLabel}データ (${masterKansyoData.length}件)`;
+        document.getElementById('resultsContainer').innerHTML = '<p style="color:blue;">読み込み完了。検索キーワードを入力してください。</p>';
+        logEvent("SwitchTarget_LoadedFromAPI", { target: target, count: masterKansyoData.length });
+      } catch (err) {
+        console.error(`[ERROR] ${targetLabel} データロード失敗:`, err);
+        logEvent("SwitchTarget_Error", { target: target, error: err.toString() });
+        document.getElementById('sourceInfo').textContent = "エラー: 冠称名データの取得に失敗しました。";
+        document.getElementById('resultsContainer').innerHTML = '<p style="color:red;">データの取得に失敗しました。</p>';
+      } finally {
+        btn31.disabled = false;
+        btn32.disabled = false;
+      }
+    }
+
+    // 5. 検索機能 (Step 1)
+    function executeKansyoSearch(query, searchKey) {
+      const container = document.getElementById('resultsContainer');
+
+      if (!query.trim()) {
+        container.innerHTML = '<p style="color:orange;">検索キーワードを入力してください。</p>';
+        logEvent("KansyoSearch_Empty", { searchKey: searchKey });
+        return;
+      }
+
+      const q = query.trim().toUpperCase();
+      const results = masterKansyoData.filter(item => {
+        const val = item[searchKey] ? String(item[searchKey]).toUpperCase() : "";
+        return val.includes(q);
+      });
+
+      logEvent("KansyoSearch_Executed", {
+        searchKey: searchKey,
+        query: q,
+        hitCount: results.length
+      });
+
+      renderKansyoResults(results);
+    }
+
+    function renderKansyoResults(results) {
+      const container = document.getElementById('resultsContainer');
+      container.innerHTML = '';
+
+      if (results.length === 0) {
+        container.innerHTML = '<p>一致する冠称名はありませんでした。</p>';
+        return;
+      }
+
+      results.forEach(item => {
+        const btn = document.createElement('div');
+        btn.className = 'result-item-btn';
+        btn.textContent = `${item.冠称名} (${item.カナ})`;
+        btn.onclick = () => selectKanshoItem(item);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectKanshoItem(item) {
+      selectedKanshoItem = item;
+
+      logEvent("KanshoItem_Selected", {
+        kanshomei: item.冠称名,
+        kana: item.カナ,
+        hasMapUrl: !!item.map_url
+      });
+
+      document.getElementById('selectedKanshomeiDisplay').textContent = item.冠称名;
+      document.getElementById('step1Container').style.display = 'none';
+      document.getElementById('step2Container').style.display = 'block';
+
+      document.getElementById('denchuInput').value = '';
+      document.getElementById('mapSearchResult').textContent = '';
+      document.getElementById('denchuFormatInfo').textContent = '';
+      document.getElementById('denchuInput').focus();
+    }
+
+    // 6. 地図検索処理 (Step 2)
+    async function performMapSearch() {
+      const resultMsg = document.getElementById('mapSearchResult');
+      const formatMsg = document.getElementById('denchuFormatInfo');
+      const denchuInput = document.getElementById('denchuInput');
+      
+      resultMsg.textContent = '';
+      formatMsg.textContent = '';
+
+      if (!selectedKanshoItem) return;
+
+      const rawInput = denchuInput.value.trim();
+
+      if (rawInput === "") {
+        if (selectedKanshoItem.map_url) {
+          logEvent("MapSearch_OverallMapOpened", { kanshomei: selectedKanshoItem.冠称名, mapUrl: selectedKanshoItem.map_url });
+          window.open(selectedKanshoItem.map_url, '_blank');
+          resultMsg.textContent = `冠称名「${selectedKanshoItem.冠称名}」の全体地図を表示しました。`;
+        } else {
+          logEvent("MapSearch_OverallMapMissing", { kanshomei: selectedKanshoItem.冠称名 });
+          resultMsg.textContent = `冠称名「${selectedKanshoItem.冠称名}」の全体地図URLが定義されていません。`;
+        }
+        return;
+      }
+
+      const conv = convertCode(rawInput);
+      if (conv.error) {
+        logEvent("MapSearch_FormatError", { rawInput: rawInput, message: conv.message });
+        resultMsg.textContent = conv.message;
+        formatMsg.textContent = "（入力形式エラー）";
+        return;
+      }
+
+      formatMsg.textContent = `正規化コード: ${conv.code}`;
+
+      const searchKey = `${selectedKanshoItem.冠称名} ${conv.code}`;
+      const is32 = (currentTarget === 'target2');
+      const latlngFileName = is32 ? 'latlng_32_sheets' : 'latlng_31_sheets';
+
+      logEvent("MapSearch_Start", {
+        rawInput: rawInput,
+        normalizedCode: conv.code,
+        searchKey: searchKey,
+        target: currentTarget
+      });
+
+      resultMsg.style.color = 'blue';
+      resultMsg.textContent = "座標照合中...";
+
+      try {
+        const url = `${GAS_BASE_URL}?fileName=${latlngFileName}&searchKey=${encodeURIComponent(searchKey)}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTPエラー! status: ${res.status}`);
+
+        const data = await res.json();
+
+        if (data.latlng) {
+          logEvent("MapSearch_Success", { searchKey: searchKey, latlng: data.latlng });
+          resultMsg.style.color = 'green';
+          resultMsg.textContent = `緯度経度取得成功: ${data.latlng}`;
+
+          const mapsUrl = 'https:' + '//www.google.com/maps/search/?api=1&query=' + encodeURIComponent(data.latlng);
+          window.open(mapsUrl, '_blank');
+
+          denchuInput.value = '';
+        } else {
+          logEvent("MapSearch_NotFound", { searchKey: searchKey });
+          resultMsg.style.color = 'red';
+          resultMsg.textContent = `"${searchKey}" に該当する電柱座標は見つかりませんでした。`;
+        }
+      } catch (err) {
+        console.error("[ERROR] 座標照合通信エラー:", err);
+        logEvent("MapSearch_Error", { searchKey: searchKey, error: err.toString() });
+        resultMsg.style.color = 'red';
+        resultMsg.textContent = "検索処理中に通信エラーが発生しました。";
+      }
+    }
+
+    function resetToStep1(fullClear = false) {
+      logEvent("ResetToStep1", { fullClear: fullClear });
+      selectedKanshoItem = null;
+      document.getElementById('step1Container').style.display = 'block';
+      document.getElementById('step2Container').style.display = 'none';
+
+      if (fullClear) {
+        document.getElementById('nameInput').value = '';
+        document.getElementById('kanaInput').value = '';
+        document.getElementById('resultsContainer').innerHTML = '';
+      }
+    }
+
+    // 7. イベントリスナー定義
+    function setupEventListeners() {
+      const nameInput = document.getElementById('nameInput');
+      const kanaInput = document.getElementById('kanaInput');
+      const denchuInput = document.getElementById('denchuInput');
+      const versionLabel = document.getElementById('versionLabel');
+      const toast = document.getElementById('toast');
+
+      const changeLog = "【更新履歴】\nv1.02: 機能修正\n- ピンポイント検索後に電柱入力欄を自動クリア\n- アクセスログ追記箇所の修正\n- 訪問者数カウント表示の連携補正\n- GitHub Pages版へ移行 (スマホマルチアカウント問題対応)\n- フロントエンドのコンソールログ機能強化・スマホUIサイズ最適化";
+      
+      versionLabel.addEventListener('click', () => {
+        logEvent("VersionLabel_Clicked");
+        toast.textContent = changeLog;
+        toast.className = "show";
+        setTimeout(() => { toast.className = ""; }, 5000);
+      });
+
+      const triggerNameSearch = () => {
+        kanaInput.value = '';
+        executeKansyoSearch(nameInput.value, '冠称名');
+      };
+      document.getElementById('nameSearchBtn').addEventListener('click', () => {
+        logEvent("NameSearchBtn_Clicked");
+        triggerNameSearch();
+      });
+      nameInput.addEventListener('input', triggerNameSearch);
+      nameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.isComposing) triggerNameSearch();
+      });
+
+      const triggerKanaSearch = () => {
+        nameInput.value = '';
+        executeKansyoSearch(kanaInput.value, 'カナ');
+      };
+      document.getElementById('kanaSearchBtn').addEventListener('click', () => {
+        logEvent("KanaSearchBtn_Clicked");
+        triggerKanaSearch();
+      });
+      kanaInput.addEventListener('input', triggerKanaSearch);
+      kanaInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.isComposing) triggerKanaSearch();
+      });
+
+      document.getElementById('mapSearchBtn').addEventListener('click', () => {
+        logEvent("MapSearchBtn_Clicked");
+        performMapSearch();
+      });
+      denchuInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.isComposing) performMapSearch();
+      });
+
+      document.getElementById('resetSearchBtn').addEventListener('click', () => resetToStep1(false));
+    }
+  </script>
+</body>
+</html>

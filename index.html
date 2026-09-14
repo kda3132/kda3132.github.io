@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>検索くんProFinal - ログイン</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 min-h-screen p-4">
+    <div class="min-h-screen grid place-items-center">
+        <div class="w-full max-w-sm bg-white p-8 rounded-2xl shadow-2xl border border-blue-500/20 transform transition duration-300 hover:shadow-blue-500/40">
+            <h1 class="text-3xl font-extrabold text-center text-slate-800 mb-8 border-b-2 border-blue-500 pb-3 tracking-wide">
+                検索くんProFinal
+            </h1>
+            
+            <form id="loginForm">
+                <!-- 接続元情報（GAS側へ渡す隠しフィールド） -->
+                <input type="hidden" id="userAgentField">
+                <input type="hidden" id="ipField">
+                <input type="hidden" id="hostnameField">
+
+                <div class="mb-5">
+                    <label for="username" class="block text-sm font-semibold text-slate-700 mb-1">ユーザーID</label>
+                    <input type="text" id="username" required
+                           class="w-full px-4 py-2 border-2 border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 transition duration-300 ease-in-out shadow-inner placeholder:text-slate-400"
+                           placeholder="あなたのユーザーID">
+                </div>
+                
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-semibold text-slate-700 mb-1">パスワード</label>
+                    <input type="password" id="password" required
+                           class="w-full px-4 py-2 border-2 border-slate-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 transition duration-300 ease-in-out shadow-inner placeholder:text-slate-400"
+                           placeholder="パスワード">
+                </div>
+
+                <div class="mb-6 border-t pt-4 border-slate-200">
+                    <label class="block text-sm font-bold text-slate-800 mb-3">表示するターゲットを選択</label>
+                    <div class="flex justify-around"> 
+                        <label class="inline-flex items-center p-3 rounded-lg border border-slate-300 hover:bg-blue-50 transition duration-150">
+                            <input type="radio" name="target" value="target1" checked
+                                   class="form-radio h-5 w-5 text-blue-600 border-slate-400 focus:ring-blue-500">
+                            <span class="ml-3 text-slate-700 font-bold">31所</span>
+                        </label>
+                        <label class="inline-flex items-center p-3 rounded-lg border border-slate-300 hover:bg-green-50 transition duration-150">
+                            <input type="radio" name="target" value="target2"
+                                   class="form-radio h-5 w-5 text-green-600 border-slate-400 focus:ring-green-500">
+                            <span class="ml-3 text-slate-700 font-bold">32所</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <hr class="my-6 border-slate-300">
+                <div id="errorMessage" class="text-red-500 text-sm font-bold mb-3 hidden text-center"></div>
+
+                <button type="submit" 
+                        class="w-full bg-blue-600 text-white py-3 rounded-xl font-extrabold text-lg hover:bg-blue-700 transition duration-300 ease-in-out shadow-xl transform hover:scale-[1.03] active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-blue-300 mt-2">
+                    ログイン
+                </button>
+                <br>
+                <label class="block text-sm font-bold text-slate-800 mb-3 text-center mt-4">(C)T.Okada 2026</label>
+            </form>
+        </div>
+    </div>
+
+<script>
+    // ★★★ GASのウェブアプリURL ★★★
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyW8CjANCsRUy507KkO0SyXSLRvpm-IXlPPAp7MQQecckCvaPm312wrRd3dA2rmBXsxyQ/exec"; 
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const userAgentField = document.getElementById('userAgentField');
+        const ipField = document.getElementById('ipField');
+        const hostnameField = document.getElementById('hostnameField');
+        const loginForm = document.getElementById('loginForm');
+        const errorMessage = document.getElementById('errorMessage');
+
+        if (userAgentField) userAgentField.value = navigator.userAgent || 'Unknown';
+
+        async function fetchClientInfo() {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                const response = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (ipField) ipField.value = data.ip || '取得失敗';
+                    if (hostnameField) hostnameField.value = data.hostname || data.org || '取得失敗';
+                }
+            } catch (error) {
+                if (ipField) ipField.value = '取得エラー';
+                if (hostnameField) hostnameField.value = '取得エラー';
+            }
+        }
+        fetchClientInfo();
+
+        if (loginForm) {
+            loginForm.addEventListener('submit', async function (e) {
+                e.preventDefault(); // デフォルトのフォーム送信をキャンセル
+
+                const submitBtn = loginForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true; 
+                submitBtn.innerText = "ログイン処理中..."; 
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                errorMessage.classList.add('hidden');
+
+                if (userAgentField.value === '') userAgentField.value = navigator.userAgent || 'Unknown';
+                if (!ipField.value) await fetchClientInfo();
+
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                const target = document.querySelector('input[name="target"]:checked').value;
+
+                // POSTデータの構築
+                const formData = new URLSearchParams();
+                formData.append('action', 'login'); // 認証APIであることを明示
+                formData.append('username', username);
+                formData.append('password', password);
+                formData.append('target', target);
+                formData.append('useragent', userAgentField.value);
+                formData.append('ip', ipField.value);
+                formData.append('hostname', hostnameField.value);
+
+                try {
+                    // GASへフェッチ (CORS制約によりリダイレクトを許容するモードを設定)
+                    const response = await fetch(GAS_URL, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // ログイン成功: フロントエンドHTMLで使う情報をsessionStorageに保存
+                        sessionStorage.setItem('isLoggedIn', 'true');
+                        sessionStorage.setItem('gasBaseUrl', GAS_URL);
+                        sessionStorage.setItem('userAgent', userAgentField.value);
+                        sessionStorage.setItem('initialTarget', target);
+                        sessionStorage.setItem('visitCount', result.visitCount);
+                        
+                        // メイン画面へ遷移 (同じ階層の search_final.html を想定)
+                        window.location.href = './search_final.html'; 
+                    } else {
+                        // ログイン失敗
+                        errorMessage.innerText = result.message || "ユーザーIDまたはパスワードが正しくありません。";
+                        errorMessage.classList.remove('hidden');
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "ログイン";
+                        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                } catch (error) {
+                    errorMessage.innerText = "通信エラーが発生しました。時間を置いて再度お試しください。";
+                    errorMessage.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "ログイン";
+                    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>S
