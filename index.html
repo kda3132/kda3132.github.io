@@ -63,7 +63,7 @@
     </div>
 
 <script>
-    // ★★★ GASのウェブアプリURL ★★★
+    // ★ GASURL ★
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyW8CjANCsRUy507KkO0SyXSLRvpm-IXlPPAp7MQQecckCvaPm312wrRd3dA2rmBXsxyQ/exec"; 
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -97,6 +97,7 @@
             loginForm.addEventListener('submit', async function (e) {
                 e.preventDefault(); // デフォルトのフォーム送信をキャンセル
 
+                //連打防止
                 const submitBtn = loginForm.querySelector('button[type="submit"]');
                 submitBtn.disabled = true; 
                 submitBtn.innerText = "ログイン処理中..."; 
@@ -137,7 +138,7 @@
                         sessionStorage.setItem('initialTarget', target);
                         sessionStorage.setItem('visitCount', result.visitCount);
                         
-                        // メイン画面へ遷移 (同じ階層の search_final.html を想定)
+                        // フロントエンド
                         window.location.href = './search_final.html'; 
                     } else {
                         // ログイン失敗
