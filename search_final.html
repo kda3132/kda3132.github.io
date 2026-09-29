@@ -149,7 +149,7 @@
 </head>
 
 <body>
-  <h1>検索くんPro統合版 <span id="versionLabel" style="font-size: 60%; font-weight: normal; cursor: pointer; color: #007bff;">ver.1.02β</span></h1>
+  <h1>検索くんPro統合版 <span id="versionLabel" style="font-size: 60%; font-weight: normal; cursor: pointer; color: #007bff;">ver.1.10β</span></h1>
   
   <!-- ダイアログ（ボタンを中央配置） -->
   <dialog id="historyDialog">
@@ -531,7 +531,15 @@
       const dialog = document.getElementById('historyDialog');
       const dialogContent = document.getElementById('historyDialogContent');
 
-      const changeLog = "【更新履歴】\nv1.02: 機能修正\n- ピンポイント検索後に電柱入力欄を自動クリア\n- アクセスログ追記箇所の修正\n- 訪問者数カウント表示の連携補正\n- GitHub Pages版へ移行 (スマホマルチアカウント問題対応)\n- フロントエンドのコンソールログ機能強化・スマホUIサイズ最適化";
+      const changeLog = "【更新履歴】\n
+        v1.10β: 機能修正\n
+        - ピンポイント検索後に電柱入力欄を自動クリア\n
+        - アクセスログ追記箇所の修正\n
+        - 訪問者数カウント表示の連携補正\n
+        - GitHub Pages版へ移行 (スマホマルチアカウント問題対応)\n
+        - コンソールログ機能強化・スマホUIサイズ最適化
+      　- KeepAlive機能追加
+        ";
       
       // バージョン情報クリックでダイアログを開く
       versionLabel.addEventListener('click', () => {
