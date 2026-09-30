@@ -313,72 +313,54 @@
       switchTarget(currentTarget, true);
     });
 
-  // --- ローカルストレージを活用した更新チェック付き冠称名データ取得関数 ---
-  async function fetchKansyoDataWithCache(fileNameParam) {
-  const cacheKeyData = `ls_data_${fileNameParam}`;
-  const cacheKeyTime = `ls_time_${fileNameParam}`;
+  // --- ★ローカルストレージを活用した更新チェック付き冠称名データ取得関数★ ---
+  async function fetchKansyoDataWithCache(fileName) {
+  const cacheDataKey = `kansyo_data_${fileName}`;
+  const cacheTimeKey = `kansyo_time_${fileName}`;
 
-  const cachedData = localStorage.getItem(cacheKeyData);
-  const cachedTime = localStorage.getItem(cacheKeyTime);
+  const localData = localStorage.getItem(cacheDataKey);
+  const localLastUpdated = localStorage.getItem(cacheTimeKey);
 
-  // 1. キャッシュが存在する場合、最終更新日だけをチェック
-  if (cachedData && cachedTime) {
-    try {
-      const checkUrl = `${GAS_BASE_URL}?action=get_last_updated`;
-      // redirect: 'follow' を明示
-      const checkRes = await fetch(checkUrl, { redirect: 'follow' });
-      
-      if (checkRes.ok) {
-        const checkJson = await checkRes.json();
-        // GAS側が正常に { lastUpdated: "..." } を返した場合のみ比較
-        if (checkJson && checkJson.lastUpdated && checkJson.lastUpdated === cachedTime) {
-          logInfo("CACHE", `[LocalStorage Hit] ${fileNameParam} の最新データがローカルに存在します。`);
-          return JSON.parse(cachedData);
-        }
-      }
-    } catch (e) {
-      // get_last_updated が未実装、またはエラー時はログのみ出力して全取得へ進む（ここで落とさない）
-      logInfo("CACHE", `更新チェックをスキップ（全データ取得へ移行）: ${e.message}`);
+  try {
+    // 1. GASから最新の最終更新タイムスタンプを取得
+    const checkUrl = `${GAS_URL}?action=get_last_updated`;
+    const checkRes = await fetch(checkUrl);
+    const checkJson = await checkRes.json();
+    
+    // 数値型に変換（ここがポイント）
+    const serverTime = Number(checkJson.lastUpdated || 0);
+    const localTime = Number(localLastUpdated || 0);
+
+    // 2. ローカルデータが存在し、かつサーバーの更新日時がローカル以下ならローカルキャッシュを返す
+    if (localData && localTime > 0 && serverTime <= localTime) {
+      logInfo("CACHE", `[LocalStorage Hit] ${fileName} のキャッシュを使用します。`);
+      return JSON.parse(localData);
     }
-  }
 
-  // 2. キャッシュがない、または更新がある場合は全データを取得
-  logInfo("FETCH", `[LocalStorage Update] ${fileNameParam} の最新データをGASから取得します。`);
-  const requestUrl = `${GAS_BASE_URL}?fileName=${fileNameParam}`;
-  
-  // redirect: 'follow' を追加してGASのリダイレクトを確実に追跡
-  const response = await fetch(requestUrl, { redirect: 'follow' });
-  
-  if (!response.ok) {
-    throw new Error(`HTTPエラー! status: ${response.status}`);
-  }
+    // 3. 更新がある（またはキャッシュがない）場合はGASから最新データを取得
+    logInfo("FETCH", `[LocalStorage Update] ${fileName} の最新データをGASから取得します。`);
+    const dataUrl = `${GAS_URL}?fileName=${fileName}`;
+    const dataRes = await fetch(dataUrl);
+    const newData = await dataRes.json();
 
-  const dataJson = await response.json();
-  let actualData = [];
-  let lastUpdated = "";
-
-  if (Array.isArray(dataJson)) {
-    actualData = dataJson;
-  } else if (dataJson && dataJson.data) {
-    actualData = dataJson.data;
-    lastUpdated = dataJson.lastUpdated;
-  }
-
-  // ローカルストレージへ保存
-  if (actualData && actualData.length > 0) {
-    try {
-      localStorage.setItem(cacheKeyData, JSON.stringify(actualData));
-      if (lastUpdated) {
-        localStorage.setItem(cacheKeyTime, lastUpdated);
-      }
-    } catch (e) {
-      console.warn("[CACHE] LocalStorageへの書き込み失敗:", e);
+    // 4. 最新データとサーバーのタイムスタンプをローカルストレージに保存
+    if (Array.isArray(newData) && newData.length > 0) {
+      localStorage.setItem(cacheDataKey, JSON.stringify(newData));
+      localStorage.setItem(cacheTimeKey, serverTime.toString());
     }
-  }
 
-  return actualData;
+    return newData;
+
+  } catch (err) {
+    console.error("キャッシュ取得エラー:", err);
+    // 万が一通信エラーが起きた場合は、あればローカルデータをフォールバックとして返す
+    if (localData) {
+      logInfo("CACHE", `[LocalStorage Fallback] エラーのためローカルキャッシュを使用します。`);
+      return JSON.parse(localData);
+    }
+    throw err;
+  }
 }
-
 
     // 4. データソース切替処理
     async function switchTarget(target, forceLoad = false) {
