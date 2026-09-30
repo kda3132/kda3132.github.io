@@ -313,6 +313,65 @@
       switchTarget(currentTarget, true);
     });
 
+    // --- ローカルストレージを活用した更新チェック付き冠称名データ取得関数 ---
+    async function fetchKansyoDataWithCache(fileNameParam) {
+      const cacheKeyData = `ls_data_${fileNameParam}`;
+      const cacheKeyTime = `ls_time_${fileNameParam}`;
+
+      const cachedData = localStorage.getItem(cacheKeyData);
+      const cachedTime = localStorage.getItem(cacheKeyTime);
+
+      // 1. ローカルストレージにキャッシュが存在する場合、最終更新日だけを高速チェック
+      if (cachedData && cachedTime) {
+        try {
+          const checkUrl = `${GAS_BASE_URL}?action=get_last_updated`;
+          const checkRes = await fetch(checkUrl);
+          if (checkRes.ok) {
+            const checkJson = await checkRes.json();
+            if (checkJson && checkJson.lastUpdated === cachedTime) {
+              logInfo("CACHE", `[LocalStorage Hit] ${fileNameParam} の最新データがローカルに存在します。`);
+              return JSON.parse(cachedData);
+            }
+          }
+        } catch (e) {
+          logInfo("CACHE", `更新チェック通信失敗。ローカルキャッシュを使用します: ${e.message}`);
+          return JSON.parse(cachedData);
+        }
+      }
+
+      // 2. キャッシュがない、またはスプレッドシートが更新されている場合は全データを再取得
+      logInfo("FETCH", `[LocalStorage Update] ${fileNameParam} の最新データをGASから取得します。`);
+      const requestUrl = `${GAS_BASE_URL}?fileName=${fileNameParam}`;
+      const response = await fetch(requestUrl);
+      if (!response.ok) throw new Error(`HTTPエラー! status: ${response.status}`);
+
+      const dataJson = await response.json();
+      let actualData = [];
+      let lastUpdated = "";
+
+      if (Array.isArray(dataJson)) {
+        actualData = dataJson;
+      } else if (dataJson && dataJson.data) {
+        actualData = dataJson.data;
+        lastUpdated = dataJson.lastUpdated;
+      }
+
+      // ローカルストレージへ保存 (期限なし)
+      if (actualData && actualData.length > 0) {
+        try {
+          localStorage.setItem(cacheKeyData, JSON.stringify(actualData));
+          if (lastUpdated) {
+            localStorage.setItem(cacheKeyTime, lastUpdated);
+          }
+        } catch (e) {
+          console.warn("[CACHE] LocalStorageへの書き込み失敗:", e);
+        }
+      }
+
+      return actualData;
+    }
+
+
     // 4. データソース切替処理
     async function switchTarget(target, forceLoad = false) {
       if (!forceLoad && currentTarget === target && masterKansyoData.length > 0) {
@@ -355,10 +414,9 @@
       }
 
       try {
-        const requestUrl = `${GAS_BASE_URL}?fileName=${fileNameParam}`;
-        
-        const response = await fetch(requestUrl);
-        if (!response.ok) throw new Error(`HTTPエラー! status: ${response.status}`);
+        // ローカルストレージ（最終更新チェック付き）を経由して取得
+        masterKansyoData = await fetchKansyoDataWithCache(fileNameParam);
+        sessionStorage.setItem(cacheKey, JSON.stringify(masterKansyoData));
         
         masterKansyoData = await response.json();
         sessionStorage.setItem(cacheKey, JSON.stringify(masterKansyoData));
