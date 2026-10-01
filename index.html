@@ -91,7 +91,7 @@
                 if (hostnameField) hostnameField.value = '取得エラー';
             }
         }
-        fetchClientInfo();
+        //fetchClientInfo();
 
         if (loginForm) {
             loginForm.addEventListener('submit', async function (e) {
@@ -105,7 +105,7 @@
                 errorMessage.classList.add('hidden');
 
                 if (userAgentField.value === '') userAgentField.value = navigator.userAgent || 'Unknown';
-                if (!ipField.value) await fetchClientInfo();
+                //if (!ipField.value) await fetchClientInfo();
 
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
