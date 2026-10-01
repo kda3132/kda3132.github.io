@@ -149,7 +149,7 @@
 </head>
 
 <body>
-  <h1>検索くんPro統合版 <span id="versionLabel" style="font-size: 60%; font-weight: normal; cursor: pointer; color: #007bff;">ver.1.10β</span></h1>
+  <h1>検索くんPro統合版 <span id="versionLabel" style="font-size: 60%; font-weight: normal; cursor: pointer; color: #007bff;">ver.1.20β</span></h1>
   
   <!-- ダイアログ（ボタンを中央配置） -->
   <dialog id="historyDialog">
@@ -336,12 +336,12 @@
 
     // 2. ローカルデータが存在し、かつサーバーの更新日時がローカル以下ならローカルキャッシュを返す
     if (localData && localTime > 0 && serverTime <= localTime) {
-      logInfo("CACHE", `[LocalStorage Hit] ${fileName} のキャッシュを使用します。`);
+      logInfo("CACHE", `[LocalStorage Hit] キャッシュを使用します。`);
       return JSON.parse(localData);
     }
 
     // 3. 更新がある（またはキャッシュがない）場合はGASから最新データを取得
-    logInfo("FETCH", `[LocalStorage Update] ${fileName} の最新データをGASから取得します。`);
+    logInfo("FETCH", `[LocalStorage Update] $GASから取得します。`);
     const dataUrl = `${GAS_URL}?fileName=${fileName}`;
     const dataRes = await fetch(dataUrl);
     const newData = await dataRes.json();
@@ -580,7 +580,7 @@
       const dialogContent = document.getElementById('historyDialogContent');
 
       const changeLog = `【更新履歴】
-      v1.10β: 機能修正
+      v1.20β: 機能修正
 
       - ピンポイント検索後に電柱入力欄を自動クリア
       - アクセスログ追記箇所の修正
@@ -588,6 +588,7 @@
       - GitHub Pages版へ移行 (スマホマルチアカウント問題対応)
       - コンソールログ機能強化・スマホUIサイズ最適化
       - KeepAlive機能追加
+      - localStrage、ip逆引き廃止
       `;
       
       // バージョン情報クリックでダイアログを開く
